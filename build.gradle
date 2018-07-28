@@ -1,0 +1,84 @@
+buildscript {
+    ext.KOTLIN_VER = '1.2.31'
+    ext.VERTX_VER = '3.5.3'
+
+    repositories {
+        mavenCentral()
+        maven {
+            url "https://oss.sonatype.org/content/repositories/iovertx-3783/"
+        }
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$KOTLIN_VER"
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'application'
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'groovy'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+
+group 'kurt'
+version '1.0.0'
+
+def mainClass = 'io.vertx.core.Launcher'
+def mainVerticle = 'vertx.RxVerticle'
+def watchForChange = 'src/**/*.java'
+def doOnChange
+
+if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+    doOnChange = '.\\gradlew classes'
+} else {
+    doOnChange = './gradlew classes'
+}
+
+mainClassName = mainClass
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$KOTLIN_VER"
+    compile "io.vertx:vertx-core:$VERTX_VER"
+    compile "io.vertx:vertx-web:$VERTX_VER"
+    compile "io.vertx:vertx-rx-java2:$VERTX_VER"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+shadowJar {
+    classifier = 'fat'
+    baseName = 'web'
+    manifest {
+        attributes 'Main-Class': mainClass
+        attributes 'Main-Verticle': mainVerticle
+    }
+    mergeServiceFiles {
+        include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
+    }
+}
+
+run {
+    args = ['run', mainVerticle,
+            "--redeploy=$watchForChange",
+            "--launcher-class=$mainClassName",
+            "--on-redeploy=$doOnChange"]
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
